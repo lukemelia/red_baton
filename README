@@ -1,0 +1,106 @@
+Red Baton will implement the Basic HTTP Push Relay Protocol (http://pushmodule.slact.net/protocol.html) using EventMachine and Redis.
+  
+red_baton_config.rb examples:
+
+EXAMPLE 1:
+
+red_baton do
+  publisher '/publish/:channel_id' do
+    store_messages   true     # enable message queueing 
+    message_timeout  2.hours  # expire buffered messages after 2 hours
+    max_messages     10       # store at most 10 messages
+    min_recipients   0        # minimum recipients before purge
+  end
+  
+  subscriber '/subscriptions/:channel_id' do
+    concurrency   :broadcast    # all multiple clients on the same channel
+                                # messages are relayed to all clients
+    default_type  'text/plain'  # default type for responses
+  end
+end
+
+EXAMPLE 2:
+
+red_baton do
+  publisher '/rt/publish/:channel_id' do
+    channel_group     :notifications  # namespace for channel_ids and messages
+    store_messages    true            # enable message queueing 
+    message_timeout   5.minutes       # expire buffered messages after 5 minutes
+    max_messages      5               # store at most 5 messages
+    min_messages      0               # no minimum to stored messages
+    delete_delivered  true            # delete message after delivering it
+  end
+  
+  subscriber 'rt/notifications/:channel_id' do
+    channel_group   :notifications     # namespace for channel_ids and messages
+    concurrency     :last              # only the oldest listener is kept
+    default_type    'text/javascript'  # default type for responses
+    add_header      'Cache-Control' => "max-age=0, must-revalidate"
+  end
+end
+
+
+The primary purpose of this protocol is to enable a method of long-polling,
+transparent to the web client, where client connections idle only on the HTTP
+server and need not be forwarded.
+
+The server MUST accept requests on publisher locations and respond to them
+immediately. 
+
+All clients must produce valid HTTP requests. Subscriber clients must have a
+caching mechanism that appropriately reacts to Last-Modified and Etag response
+headers (web browsers, for example).
+
+
+- The server MUST accept all valid HTTP GET requests to the subscriber location.
+- Subscriber requests are considered notifications of intent to receive some message. Subscribers may request existing messages, messages that are not yet available, and messages that are no longer available. The requested message is identified using the If-Modified-Since and If-None-Match request headers.
+- A request with no If-Modified-Since header MUST be assumed to be requesting the oldest available message in a channel.
+- Each 200 OK response containing a message MUST have its Last-Modified and Etag headers set so that a request using those headers will be interpreted as a request for the next available message.
+- Additionally, said 200 OK MUST contain the Content-Type header of the message publisher request, unless no Content-Type header had been provided or it is explicitly overridden by server configuration.
+
+Long-Polling Requests for existing messages will be responded to immediately;
+responses to requests for messages not yet available MUST be delayed until the
+message becomes available. Delayed responses MUST satisfy all of the following
+conditions:
+
+ * A 200 OK response containing the message (and its Content-Type) MUST be sent immediately after the message becomes available. The entire response must be indistinguishable from a response to a request for an existing message.
+* If the channel the subscriber is waiting on is deleted or for some reason becomes unavailable, the server MUST immediately send a 410 Gone response.
+* If another subscriber has conflicted with this request, the server MUST immediately send a 409 Conflict response.
+
+Interval-Polling
+* All requests will be responded to immediately. Requests for messages not yet available MUST produce a 304 Not Modified response code.
+
+
+3.2. The Publisher
+
+The server MUST accept all valid HTTP requests to the publisher location. The
+server, when sent a publisher request, MUST satisfy all of the following
+conditions:
+
+* GET requests receive a 200 OK response for existing channels and a 404 Not
+Found otherwise.
+
+* PUT requests receive a 200 OK response. The request creates
+a channel if no channel with the given channel id exists.
+
+* DELETE requests receive a 200 OK if the channel identified by the channel
+id exists and has been completely deleted. All subscribers MUST have been sent a 410 Gone
+response. Requests for nonexistent channels MUST be responded to with a 404
+Not Found.
+
+* POST requests are used to send messages. The request MAY contain a body in
+any encoding representing a message to be sent over the channel. The message
+MUST be immediately delivered to all currently long-held subscriber requests.
+Additionally, the message MAY be stored for future retrieval and the oldest
+message stored for the channel MAY be deleted.
+
+ A POST request MUST be replied to with a 201 Created if there were any
+long-held subscribers that have been sent this message, and with a 202
+Accepted otherwise.
+
+ The Content-Type header of the request MUST be forwarded with the message.
+
+* Message storage limits SHOULD be configurable. publisher locations SHOULD be configurable to allow foregoing message storage on POST requests.
+
+* All 200-level responses MUST, in the response body, contain information about the applicable channel. This information MAY contain the number of stored messages and the number of subscribers' requests being long-held prior to this request.
+* The server MAY implement a content-negotiation scheme for this information.

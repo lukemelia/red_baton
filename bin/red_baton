@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+
+require "rubygems"
+require "bundler"
+Bundler.setup
+
+require 'thin'
+require 'em-redis'
+require 'active_support/core_ext/object/blank'
+
+libdir = File.expand_path(File.dirname(__FILE__) + '/../lib')
+$LOAD_PATH.unshift(libdir) unless $LOAD_PATH.include?(libdir)
+
+require 'red_baton'
+
+if $0 == __FILE__
+  Thin::Logging.debug = true
+  Thin::Server.start('0.0.0.0', 3001) do
+    use Rack::CommonLogger
+    run RedBaton.new
+  end
+end
