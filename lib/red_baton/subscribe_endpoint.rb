@@ -5,14 +5,14 @@ class RedBaton
 
     def handle(channel_id, env)
       unless request_method(env) == HTTP_GET
-        return immediate_response_405_get_requests_only
+        return immediate_405_get_requests_only
       end
         
       EventMachine.next_tick do
         if register_subscriber(channel_id, session_id(env))
           subscriber_poll(channel_id, env)
         else
-          async_response_409_prior_connection(env)
+          async_409_prior_connection(env)
         end
       end
       RedBaton::AsyncResponse
@@ -24,23 +24,23 @@ class RedBaton
       @channel_manager.register_active_subscriber(channel_id, session_id)
     end
   
-    def async_response_409_prior_connection(env)
+    def async_409_prior_connection(env)
       async_response env, 409, {"Content-Type" => "text/plain"}, "Already a connection on this channel"
     end
 
-    def async_response_409_newer_connection(env)
+    def async_409_newer_connection(env)
       async_response env, 409, {"Content-Type" => "text/plain"}, "Newer connection on this channel"
     end
     
-    def async_response_410_channel_gone(env)
+    def async_410_channel_gone(env)
       async_response env, 410, {"Content-Type" => "text/plain"}, "Gone. Channel no longer exists"
     end
     
-    def async_response_200_with_message(env, message)
+    def async_200_with_message(env, message)
       async_response env, 200, {"Content-Type" => "text/plain"}, message
     end
     
-    def immediate_response_405_get_requests_only
+    def immediate_405_get_requests_only
       [405, {"Content-Type" => "text/plain"}, "Only GET requests are allowed."]
     end
     
@@ -48,9 +48,9 @@ class RedBaton
       debug "perform_subscriber_disconnect #{session_id.inspect}, #{channel_id.inspect}"
       @channel_manager.unregister_subscriber(channel_id, session_id)
       if @channel_manager.exists?(channel_id)
-        async_response_409_newer_connection(env)
+        async_409_newer_connection(env)
       else
-        async_response_410_channel_gone(env)
+        async_410_channel_gone(env)
       end
     end
 
@@ -60,10 +60,10 @@ class RedBaton
         perform_subscriber_disconnect(my_session_id, channel_id, env)
         
       elsif message = @channel_manager.pop_subscriber_message(my_session_id)
-        async_response_200_with_message(env, message)
+        async_200_with_message(env, message)
 
       elsif message = @channel_manager.pop_channel_message(channel_id)
-        async_response_200_with_message(env, message)
+        async_200_with_message(env, message)
 
       else
         EventMachine.next_tick do
