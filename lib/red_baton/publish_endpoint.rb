@@ -10,44 +10,50 @@ class RedBaton
 
         @channel_manager.publish(channel_id, rack_request.body.readlines.join("\n"))
 
-        EventMachine.next_tick do
-          async_response env, 201, {"Content-Type" => "text/plain"}, "Message delivered"
-        end
+        async_201(env, channel_id, "Message delivered")
       when 'GET'
         if @channel_manager.exists?(channel_id)
-          EventMachine.next_tick do
-            async_response env, 200, channel_info_headers(channel_id), "Channel exists"
-          end
+          async_200(env, channel_id, "Channel exists")
         else
-          EventMachine.next_tick do
-            async_response env, 404, {"Content-Type" => "text/plain"}, "Channel does not exist"
-          end
+          async_404_channel_does_not_exist(env)
         end
       when 'PUT'
         if @channel_manager.create(channel_id)
-          EventMachine.next_tick do
-            async_response env, 200, channel_info_headers(channel_id), "Channel created"
-          end
+          async_200(env, channel_id, "Channel created")
         else
-          EventMachine.next_tick do
-            async_response env, 200, channel_info_headers(channel_id), "Channel exists"
-          end
+          async_200(env, channel_id, "Channel exists")
         end
       when 'DELETE'
         if @channel_manager.delete(channel_id)
-          EventMachine.next_tick do
-            async_response env, 200, channel_info_headers(channel_id), "Channel deleted"
-          end
+          async_200(env, channel_id, "Channel deleted")
         else
-          EventMachine.next_tick do
-            async_response env, 404, {"Content-Type" => "text/plain"}, "Channel does not exist"
-          end
+          async_404_channel_does_not_exist(env)
         end
       else
         return invalid!("Unhandled HTTP method #{request_method(env)}")
       end
 
       RedBaton::AsyncResponse
+    end
+
+  private
+
+    def async_404_channel_does_not_exist(env)
+      EM.next_tick do
+        async_response(env, 404, {"Content-Type" => "text/plain"}, "Channel does not exist")
+      end
+    end
+
+    def async_200(env, channel_id, message)
+      EM.next_tick do
+        async_response(env, 200, channel_info_headers(channel_id), message)
+      end
+    end
+
+    def async_201(env, channel_id, message)
+      EM.next_tick do
+        async_response(env, 201, channel_info_headers(channel_id), message)
+      end
     end
 
     def channel_info_headers(channel_id, extra_headers = { "Content-Type" => "text/plain" } )

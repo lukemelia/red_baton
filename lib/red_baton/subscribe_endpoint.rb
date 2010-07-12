@@ -8,7 +8,7 @@ class RedBaton
         return immediate_405_get_requests_only
       end
         
-      EventMachine.next_tick do
+      EM.next_tick do
         if register_subscriber(channel_id, session_id(env))
           subscriber_poll(channel_id, env)
         else
@@ -66,7 +66,7 @@ class RedBaton
         async_200_with_message(env, message)
 
       else
-        EventMachine.next_tick do
+        EM.next_tick do
           subscriber_poll(channel_id, env)
         end
       end
