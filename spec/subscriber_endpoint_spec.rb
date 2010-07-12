@@ -37,5 +37,16 @@ describe "subscriber endpoint" do
       end
     end
   end
+  
+  context "when a message exists" do
+    it "should respond with 200 and the message" do
+      start_server(RedBaton.new)
+      post('/publish/42', "Hi, Mom!")
+      subscribe_response = get('/subscribe/42')
+      subscribe_response.code.to_i.should == 200
+      subscribe_response.body.should == "Hi, Mom!"
+      stop_server
+    end
+  end
     
 end
