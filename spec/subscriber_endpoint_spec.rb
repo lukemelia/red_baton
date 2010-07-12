@@ -25,7 +25,7 @@ describe "subscriber endpoint" do
         
         poll_until {
           response = get('/publish/42').response
-          response.header['x-subscribers'] == '1'
+          response.header['x-channel-subscribers'] == '1'
         }
         delete('/publish/42')
         

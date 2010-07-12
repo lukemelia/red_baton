@@ -26,7 +26,7 @@ describe "concurrency modes" do
       
       conn_thread_3 = Thread.new do
         poll_until do
-          get('/publish/42').response.header['x-subscribers'] == '2'
+          get('/publish/42').response.header['x-channel-subscribers'] == '2'
         end
         response_3 = post('/publish/42', 'I think I can')
       end

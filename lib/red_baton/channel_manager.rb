@@ -58,6 +58,11 @@ class RedBaton
       return 0 unless exists?(channel_id)
       @channel_subscribers[channel_id].size
     end
+    
+    def message_count(channel_id)
+      return 0 unless exists?(channel_id)
+      (@channel_messages[channel_id] || []).size
+    end
 
     def create(channel_id)
       debug "create(#{channel_id.inspect})"
