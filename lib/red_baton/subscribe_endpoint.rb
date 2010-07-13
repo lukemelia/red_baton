@@ -37,7 +37,8 @@ class RedBaton
     end
     
     def async_200_with_message(env, message)
-      async_response env, 200, {"Content-Type" => "text/plain"}, message
+      content_type, message_body = message.split("\n\n", 2)
+      async_response env, 200, {"Content-Type" => content_type}, message_body
     end
     
     def immediate_405_get_requests_only

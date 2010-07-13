@@ -70,37 +70,3 @@ conditions:
 Interval-Polling
 * All requests will be responded to immediately. Requests for messages not yet available MUST produce a 304 Not Modified response code.
 
-
-3.2. The Publisher
-
-The server MUST accept all valid HTTP requests to the publisher location. The
-server, when sent a publisher request, MUST satisfy all of the following
-conditions:
-
-* GET requests receive a 200 OK response for existing channels and a 404 Not
-Found otherwise.
-
-* PUT requests receive a 200 OK response. The request creates
-a channel if no channel with the given channel id exists.
-
-* DELETE requests receive a 200 OK if the channel identified by the channel
-id exists and has been completely deleted. All subscribers MUST have been sent a 410 Gone
-response. Requests for nonexistent channels MUST be responded to with a 404
-Not Found.
-
-* POST requests are used to send messages. The request MAY contain a body in
-any encoding representing a message to be sent over the channel. The message
-MUST be immediately delivered to all currently long-held subscriber requests.
-Additionally, the message MAY be stored for future retrieval and the oldest
-message stored for the channel MAY be deleted.
-
- A POST request MUST be replied to with a 201 Created if there were any
-long-held subscribers that have been sent this message, and with a 202
-Accepted otherwise.
-
- The Content-Type header of the request MUST be forwarded with the message.
-
-* Message storage limits SHOULD be configurable. publisher locations SHOULD be configurable to allow foregoing message storage on POST requests.
-
-* All 200-level responses MUST, in the response body, contain information about the applicable channel. This information MAY contain the number of stored messages and the number of subscribers' requests being long-held prior to this request.
-* The server MAY implement a content-negotiation scheme for this information.

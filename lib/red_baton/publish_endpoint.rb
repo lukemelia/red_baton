@@ -7,10 +7,13 @@ class RedBaton
       case request_method(env)
       when 'POST'
         rack_request = Rack::Request.new(env)
-
-        @channel_manager.publish(channel_id, rack_request.body.readlines.join("\n"))
-
-        async_201(env, channel_id, "Message delivered")
+        immediate_publish_count = @channel_manager.publish(channel_id, rack_request.body.readlines.join("\n"), rack_request.content_type)
+        
+        if immediate_publish_count > 0
+          async_201(env, channel_id, "Message delivered")
+        else
+          async_202(env, channel_id, "Message accepted")
+        end
       when 'GET'
         if @channel_manager.exists?(channel_id)
           async_200(env, channel_id, "Channel exists")
@@ -53,6 +56,12 @@ class RedBaton
     def async_201(env, channel_id, message)
       EM.next_tick do
         async_response(env, 201, channel_info_headers(channel_id), message)
+      end
+    end
+
+    def async_202(env, channel_id, message)
+      EM.next_tick do
+        async_response(env, 202, channel_info_headers(channel_id), message)
       end
     end
 

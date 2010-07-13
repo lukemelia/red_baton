@@ -38,15 +38,19 @@ class RedBaton
       end
     end
 
-    def publish(channel_id, message)
-      debug "publish(#{channel_id.inspect}, #{message.inspect})"
+    def publish(channel_id, message, content_type)
+      debug "publish(#{channel_id.inspect}, #{message.inspect}, #{content_type.inspect})"
+      message_with_content_type = "#{content_type}\n\n#{message}".freeze
       channel_message_queue = @channel_messages[channel_id] ||= []
-      channel_message_queue.unshift(message)
-
+      channel_message_queue.unshift(message_with_content_type)
+      
+      immediate_publish_count = 0
       (@channel_subscribers[channel_id] || []).each do |session_id|
         subscriber_message_queue = @subscriber_messages[session_id] ||= []
-        subscriber_message_queue.unshift(message)
+        subscriber_message_queue.unshift(message_with_content_type)
+        immediate_publish_count += 1
       end
+      immediate_publish_count
     end
 
     def exists?(channel_id)
