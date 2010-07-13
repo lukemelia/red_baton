@@ -18,20 +18,12 @@ describe "subscriber endpoint" do
         start_server(RedBaton.new)
         put('/publish/42')
         
-        subscriber_response = nil
-        subscriber_thread = Thread.new do
-          subscriber_response = get('/subscribe/42')
-        end
-        
-        poll_until {
-          response = get('/publish/42').response
-          response.header['x-channel-subscribers'] == '1'
-        }
+        subscribe_result = subscribe('/subscribe/42')
         delete('/publish/42')
         
-        subscriber_thread.join
+        subscribe_result.thread_join
         
-        subscriber_response.code.to_i.should == 410
+        subscribe_result.response.code.to_i.should == 410
         
         stop_server
       end

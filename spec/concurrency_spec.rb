@@ -14,30 +14,18 @@ describe "concurrency modes" do
     it "should publish a message to multiple subscribers on a single channel" do
       start_server(@red_baton)
       
-      response_1, response_2, response_3 = nil, nil, nil
-      
-      conn_thread_1 = Thread.new do
-        response_1 = get('/subscribe/42')
-      end
-      
-      conn_thread_2 = Thread.new do
-        response_2 = get('/subscribe/42')
-      end
-      
-      conn_thread_3 = Thread.new do
-        poll_until do
-          get('/publish/42').response.header['x-channel-subscribers'] == '2'
-        end
-        response_3 = post('/publish/42', 'I think I can')
-      end
-      
-      [conn_thread_1, conn_thread_2, conn_thread_3].each &:join
+      subscribe_result_1 = subscribe('/subscribe/42')
+      subscribe_result_2 = subscribe('/subscribe/42')
 
-      response_1.code.to_i.should == 200
-      response_1.body.should == 'I think I can'
-      response_2.code.to_i.should == 200
-      response_2.body.should == 'I think I can'
-      response_3.code.to_i.should == 201
+      publish_response = post('/publish/42', 'I think I can')
+      
+      [subscribe_result_1, subscribe_result_2].each &:thread_join
+
+      subscribe_result_1.response.code.to_i.should == 200
+      subscribe_result_1.response.body.should == 'I think I can'
+      subscribe_result_2.response.code.to_i.should == 200
+      subscribe_result_2.response.body.should == 'I think I can'
+      publish_response.code.to_i.should == 201
       
       stop_server
     end
@@ -51,18 +39,14 @@ describe "concurrency modes" do
     it "should publish a message to a channel" do
       start_server(@red_baton)
       
-      response_1, response_2 = nil, nil
-      conn_thread_1 = Thread.new do
-        response_1 = get('/subscribe/42')
-      end
+      subscribe_result = subscribe('/subscribe/42')
+      publish_response = post('/publish/42', 'I think I can')
       
-      response_2 = post('/publish/42', 'I think I can')
-      
-      conn_thread_1.join
+      subscribe_result.thread_join
 
-      response_1.code.to_i.should == 200
-      response_1.body.should == 'I think I can'
-      response_2.code.to_i.should == 201
+      subscribe_result.response.code.to_i.should == 200
+      subscribe_result.response.body.should == 'I think I can'
+      publish_response.code.to_i.should == 201
       
       stop_server
     end
@@ -95,18 +79,14 @@ describe "concurrency modes" do
     it "should publish a message to a channel" do
       start_server(@red_baton)
       
-      response_1, response_2 = nil, nil
-      conn_thread_1 = Thread.new do
-        response_1 = get('/subscribe/42')
-      end
+      subscribe_result = subscribe('/subscribe/42')
+      publish_response = post('/publish/42', 'I think I can')
       
-      response_2 = post('/publish/42', 'I think I can')
-      
-      conn_thread_1.join
+      subscribe_result.thread_join
 
-      response_1.code.to_i.should == 200
-      response_1.body.should == 'I think I can'
-      response_2.code.to_i.should == 201
+      subscribe_result.response.code.to_i.should == 200
+      subscribe_result.response.body.should == 'I think I can'
+      publish_response.code.to_i.should == 201
       
       stop_server
     end

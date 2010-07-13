@@ -29,10 +29,7 @@ describe "publisher endpoint" do
       it "should include the number of subscribers in an X-Channel-Subscribers header" do
         get('/publish/42').header['x-channel-subscribers'].should == '0'
 
-        subscriber_response = nil
-        subscriber_thread = Thread.new do
-          subscriber_response = get('/subscribe/42')
-        end
+        subscriber_result = subscribe('/subscribe/42')
 
         poll_until {
           response = get('/publish/42').response
@@ -40,7 +37,7 @@ describe "publisher endpoint" do
         }
         delete('/publish/42')
 
-        subscriber_thread.join
+        subscriber_result.thread_join
       end
       
       it "should include the number of messages in an X-Channel-Messages header" do
@@ -76,10 +73,7 @@ describe "publisher endpoint" do
       it "should include the number of subscribers in an X-Channel-Subscribers header" do
         put('/publish/42').header['x-channel-subscribers'].should == '0'
 
-        subscriber_response = nil
-        subscriber_thread = Thread.new do
-          subscriber_response = get('/subscribe/42')
-        end
+        subscribe_result = subscribe('/subscribe/42')
 
         poll_until {
           response = get('/publish/42').response
@@ -87,7 +81,7 @@ describe "publisher endpoint" do
         }
         delete('/publish/42')
 
-        subscriber_thread.join
+        subscribe_result.thread_join
       end
       
       it "should include the number of messages in an X-Channel-Messages header" do
@@ -119,10 +113,7 @@ describe "publisher endpoint" do
       it "should include the number of subscribers in an X-Channel-Subscribers header" do
         put('/publish/42').header['x-channel-subscribers'].should == '0'
 
-        subscriber_response = nil
-        subscriber_thread = Thread.new do
-          subscriber_response = get('/subscribe/42')
-        end
+        subscribe_result = subscribe('/subscribe/42')
 
         poll_until {
           response = get('/publish/42').response
@@ -130,7 +121,7 @@ describe "publisher endpoint" do
         }
         delete('/publish/42')
 
-        subscriber_thread.join
+        subscribe_result.thread_join
       end
       
       it "should include the number of messages in an X-Channel-Messages header" do
@@ -183,19 +174,11 @@ describe "publisher endpoint" do
       end
       
       it "should trigger disconnects for open subscriber connections" do
-        subscriber_response = nil
-        subscriber_thread = Thread.new do
-          subscriber_response = get('/subscribe/42')
-        end
-        
-        poll_until {
-          response = get('/publish/42').response
-          response.header['x-channel-subscribers'] == '1'
-        }
+        subscribe_result = subscribe('/subscribe/42')
         delete('/publish/42')
-        subscriber_thread.join
+        subscribe_result.thread_join
         
-        subscriber_response.response.code.to_i.should == 410
+        subscribe_result.response.code.to_i.should == 410
       end
     end
   end
