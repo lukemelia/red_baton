@@ -67,6 +67,9 @@ class SubscribeResult
   def thread_join
     thread.join
   end
+  def code
+    response.code.to_i
+  end
 end
 
 def subscribe(endpoint)

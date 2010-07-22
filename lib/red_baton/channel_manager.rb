@@ -2,8 +2,11 @@ class RedBaton
   class ChannelManager
     include Thin::Logging
     
-    def initialize(concurrency_model)
-      @concurrency_model = concurrency_model
+    attr_reader :concurrency
+
+    def initialize(concurrency, store_messages = false)
+      @concurrency = concurrency
+      @store_messages = store_messages
       @channel_subscribers = {}
       @channel_messages = {}
       @subscriber_messages = {}
@@ -17,7 +20,7 @@ class RedBaton
       subscribers = @channel_subscribers[channel_id]
 
       if subscribers.length > 0
-        case @concurrency_model
+        case @concurrency
         when :last
           subscribers.each do |older_session_id|
             initiate_disconnect(older_session_id)
@@ -41,8 +44,11 @@ class RedBaton
     def publish(channel_id, message, content_type)
       debug "publish(#{channel_id.inspect}, #{message.inspect}, #{content_type.inspect})"
       message_with_content_type = "#{content_type}\n\n#{message}".freeze
-      channel_message_queue = @channel_messages[channel_id] ||= []
-      channel_message_queue.unshift(message_with_content_type)
+      
+      if @store_messages
+        channel_message_queue = @channel_messages[channel_id] ||= []
+        channel_message_queue.unshift(message_with_content_type)
+      end
       
       immediate_publish_count = 0
       (@channel_subscribers[channel_id] || []).each do |session_id|
@@ -97,10 +103,10 @@ class RedBaton
       end
     end
 
-    def pop_channel_message(channel_id)
+    def get_channel_message(channel_id)
       debug "pop_channel_message(#{channel_id.inspect})"
       message_queue = @channel_messages[channel_id] || []
-      message_queue.pop
+      message_queue.first
     end
 
     def pop_subscriber_message(session_id)

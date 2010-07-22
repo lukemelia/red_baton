@@ -63,7 +63,7 @@ class RedBaton
       elsif message = @channel_manager.pop_subscriber_message(my_session_id)
         async_200_with_message(env, message)
 
-      elsif message = @channel_manager.pop_channel_message(channel_id)
+      elsif message = @channel_manager.get_channel_message(channel_id)
         async_200_with_message(env, message)
 
       else

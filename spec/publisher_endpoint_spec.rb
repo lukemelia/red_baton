@@ -15,7 +15,7 @@ describe "publisher endpoint" do
     end
     context "when the specified channel exists" do
       before(:each) do
-        start_server(RedBaton.new)
+        start_server(RedBaton.new(:store_messages => true))
         put('/publish/42')
       end
       after(:each) do
@@ -92,7 +92,7 @@ describe "publisher endpoint" do
 
     context "when the specified channel exists" do
       before(:each) do
-        start_server(RedBaton.new)
+        start_server(RedBaton.new(:store_messages => true))
         put('/publish/42')
         get('/publish/42').code.to_i.should == 200
       end
@@ -217,7 +217,7 @@ describe "publisher endpoint" do
 
     describe "HTTP response" do
       before(:each) do
-        start_server(RedBaton.new)
+        start_server(RedBaton.new(:store_messages => true))
         put('/publish/42')
       end
       after(:each) do
@@ -258,12 +258,44 @@ describe "publisher endpoint" do
     xspecify "Message storage limits SHOULD be configurable. publisher locations SHOULD be configurable to allow message storage."
 
     context "message storage is configured" do
-      xspecify "the message MAY be stored for future retrieval"
+      before(:each) do
+        start_server(RedBaton.new(:store_messages => true, :max_messages => 1))
+        put('/publish/42')
+      end
+      after(:each) do
+        stop_server
+      end
+      
+      specify "the message MAY be stored for future retrieval" do
+        post('/publish/42', 'Hi Mom')
+        subscriber_result = subscribe('/subscribe/42')
+        get('/publish/42').header['x-channel-messages'].should == '1'
+        
+        subscriber_result.thread_join
+        subscriber_result.code.should == 200
+        subscriber_result.response.body.should == 'Hi Mom'
+      end
+      
       xspecify "the oldest message stored for the channel MAY be deleted"
     end
     
     context "message storage is off" do
-      xspecify "messages are not stored for future retrieval"
+      before(:each) do
+        start_server(RedBaton.new(:store_messages => false))
+        put('/publish/42')
+      end
+      after(:each) do
+        stop_server
+      end
+      specify "messages are not stored for future retrieval" do
+        post('/publish/42', 'Hi Mom')
+        subscriber_result = subscribe('/subscribe/42')
+        get('/publish/42').header['x-channel-messages'].should == '0'
+        
+        delete('/publish/42')
+        subscriber_result.thread_join
+        subscriber_result.response.code.should_not == 200
+      end
     end
     
   end
