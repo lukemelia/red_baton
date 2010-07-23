@@ -14,7 +14,8 @@ class RedBaton
   def initialize(opts = {})
     concurrency = opts[:concurrency] || :broadcast
     store_messages = opts[:store_messages] || false
-    @channel_manager = ChannelManager.new(concurrency, store_messages)
+    max_messages = opts[:max_messages] || 5
+    @channel_manager = ChannelManager.new(concurrency, store_messages, max_messages)
     @publish_endpoint = PublishEndpoint.new(@channel_manager)
     @subscribe_endpoint = SubscribeEndpoint.new(@channel_manager)
     @default_endpoint = DefaultEndpoint.new(@channel_manager)

@@ -255,9 +255,7 @@ describe "publisher endpoint" do
       end
     end
 
-    xspecify "Message storage limits SHOULD be configurable. publisher locations SHOULD be configurable to allow message storage."
-
-    context "message storage is configured" do
+    context "message storage is configured to store at most 1 message" do
       before(:each) do
         start_server(RedBaton.new(:store_messages => true, :max_messages => 1))
         put('/publish/42')
@@ -276,10 +274,19 @@ describe "publisher endpoint" do
         subscriber_result.response.body.should == 'Hi Mom'
       end
       
-      xspecify "the oldest message stored for the channel MAY be deleted"
+      specify "the oldest message stored for the channel MAY be deleted" do
+        post('/publish/42', 'First message')
+        post('/publish/42', 'Second message')
+        subscriber_result = subscribe('/subscribe/42')
+        get('/publish/42').header['x-channel-messages'].should == '1'
+        
+        subscriber_result.thread_join
+        subscriber_result.code.should == 200
+        subscriber_result.response.body.should == 'Second message'
+      end
     end
     
-    context "message storage is off" do
+    context "message storage is disabled" do
       before(:each) do
         start_server(RedBaton.new(:store_messages => false))
         put('/publish/42')

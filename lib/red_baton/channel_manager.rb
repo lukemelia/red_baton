@@ -4,9 +4,10 @@ class RedBaton
     
     attr_reader :concurrency
 
-    def initialize(concurrency, store_messages = false)
+    def initialize(concurrency, store_messages = false, max_messages = 5)
       @concurrency = concurrency
       @store_messages = store_messages
+      @max_messages = max_messages
       @channel_subscribers = {}
       @channel_messages = {}
       @subscriber_messages = {}
@@ -46,8 +47,7 @@ class RedBaton
       message_with_content_type = "#{content_type}\n\n#{message}".freeze
       
       if @store_messages
-        channel_message_queue = @channel_messages[channel_id] ||= []
-        channel_message_queue.unshift(message_with_content_type)
+        add_to_channel_message_queue(channel_id, message_with_content_type)
       end
       
       immediate_publish_count = 0
@@ -124,6 +124,14 @@ class RedBaton
     def should_disconnect?(session_id)
       debug "should_disconnect?(#{session_id.inspect})"
       @session_disconnects.delete?(session_id)
+    end
+    
+    def add_to_channel_message_queue(channel_id, message_with_content_type)
+      channel_message_queue = @channel_messages[channel_id] ||= []
+      channel_message_queue.unshift(message_with_content_type)
+      if channel_message_queue.size > @max_messages
+        channel_message_queue.pop
+      end
     end
   end
 end
