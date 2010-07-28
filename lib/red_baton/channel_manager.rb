@@ -42,18 +42,17 @@ class RedBaton
       end
     end
 
-    def publish(channel_id, message, content_type)
-      debug "publish(#{channel_id.inspect}, #{message.inspect}, #{content_type.inspect})"
-      message_with_content_type = "#{content_type}\n\n#{message}".freeze
+    def publish(channel_id, message)
+      debug "publish(#{channel_id.inspect}, #{message.inspect})"
       
       if @store_messages
-        add_to_channel_message_queue(channel_id, message_with_content_type)
+        add_to_channel_message_queue(channel_id, message)
       end
       
       immediate_publish_count = 0
       (@channel_subscribers[channel_id] || []).each do |session_id|
         subscriber_message_queue = @subscriber_messages[session_id] ||= []
-        subscriber_message_queue.unshift(message_with_content_type)
+        subscriber_message_queue.unshift(message)
         immediate_publish_count += 1
       end
       immediate_publish_count
@@ -103,10 +102,22 @@ class RedBaton
       end
     end
 
-    def get_channel_message(channel_id)
+    def get_channel_message(channel_id, if_modified_since, if_none_match)
       debug "pop_channel_message(#{channel_id.inspect})"
       message_queue = @channel_messages[channel_id] || []
-      message_queue.first
+      message_queue.detect do |message|
+        if if_none_match.nil? && if_modified_since.nil?
+          true
+        else
+          if if_none_match && (message.etag == if_none_match)
+            false
+          elsif if_modified_since && (message.timestamp.to_i <= Time.parse(if_modified_since).to_i)
+            false
+          else
+            true
+          end
+        end
+      end
     end
 
     def pop_subscriber_message(session_id)
@@ -126,11 +137,14 @@ class RedBaton
       @session_disconnects.delete?(session_id)
     end
     
-    def add_to_channel_message_queue(channel_id, message_with_content_type)
+    def add_to_channel_message_queue(channel_id, message)
       channel_message_queue = @channel_messages[channel_id] ||= []
-      channel_message_queue.unshift(message_with_content_type)
+      if channel_message_queue.any? && channel_message_queue.last.timestamp.to_i == message.timestamp.to_i
+        message.increment_timestamp
+      end
+      channel_message_queue.push(message)
       if channel_message_queue.size > @max_messages
-        channel_message_queue.pop
+        channel_message_queue.shift
       end
     end
   end

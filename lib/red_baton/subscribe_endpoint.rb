@@ -37,8 +37,11 @@ class RedBaton
     end
     
     def async_200_with_message(env, message)
-      content_type, message_body = message.split("\n\n", 2)
-      async_response env, 200, {"Content-Type" => content_type}, message_body
+      async_response env, 200,
+                     { "Last-Modified" => message.http_timestamp,
+                       "ETag" => message.etag,
+                       "Content-Type" => message.content_type },
+                     message.body
     end
     
     def immediate_405_get_requests_only
@@ -57,13 +60,14 @@ class RedBaton
 
     def subscriber_poll(channel_id, env)
       my_session_id = session_id(env)
+      
       if @channel_manager.should_disconnect?(my_session_id)
         perform_subscriber_disconnect(my_session_id, channel_id, env)
         
       elsif message = @channel_manager.pop_subscriber_message(my_session_id)
         async_200_with_message(env, message)
 
-      elsif message = @channel_manager.get_channel_message(channel_id)
+      elsif message = @channel_manager.get_channel_message(channel_id, env['HTTP_IF_MODIFIED_SINCE'], env['HTTP_IF_NONE_MATCH'])
         async_200_with_message(env, message)
 
       else

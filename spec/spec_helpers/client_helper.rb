@@ -1,11 +1,11 @@
 require 'net/http'
 require 'uri'
 
-def get(endpoint)
+def get(endpoint, special_headers = {})
   url = URI.parse("http://0.0.0.0:3001#{endpoint}")
   Net::HTTP.start(url.host, url.port) {|http|
     http.read_timeout = 5
-    http.get(endpoint)
+    http.get(endpoint, special_headers)
   }
 rescue EOFError => e # stopping Thin during open connection
   # OK
@@ -67,17 +67,23 @@ class SubscribeResult
   def thread_join
     thread.join
   end
+  def body
+    response.body
+  end
   def code
     response.code.to_i
   end
 end
 
-def subscribe(endpoint)
+def subscribe(endpoint, opts = {})
   starting_number_of_subscribers = get('/publish/42').response.header['x-channel-subscribers'].to_i
-
+  
+  request_headers = {}
+  request_headers['If-Modified-Since'] = opts[:if_modified_since] if opts[:if_modified_since]
+  request_headers['If-None-Match'] = opts[:if_none_match] if opts[:if_none_match]
   subscribe_result = SubscribeResult.new
   subscribe_result.thread = Thread.new do
-    subscribe_result.response = get('/subscribe/42')
+    subscribe_result.response = get('/subscribe/42', request_headers)
   end
 
   poll_until {

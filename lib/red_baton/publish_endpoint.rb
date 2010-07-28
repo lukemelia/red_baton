@@ -7,7 +7,8 @@ class RedBaton
       case request_method(env)
       when 'POST'
         rack_request = Rack::Request.new(env)
-        immediate_publish_count = @channel_manager.publish(channel_id, rack_request.body.readlines.join("\n"), rack_request.content_type)
+        message = Message.new(rack_request.body.readlines.join("\n"), Time.now, rack_request.content_type)
+        immediate_publish_count = @channel_manager.publish(channel_id, message)
         
         if immediate_publish_count > 0
           async_201(env, channel_id, "Message delivered")

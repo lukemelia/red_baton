@@ -40,23 +40,13 @@ red_baton do
 end
 
 
-The primary purpose of this protocol is to enable a method of long-polling,
-transparent to the web client, where client connections idle only on the HTTP
-server and need not be forwarded.
-
-The server MUST accept requests on publisher locations and respond to them
-immediately. 
-
 All clients must produce valid HTTP requests. Subscriber clients must have a
 caching mechanism that appropriately reacts to Last-Modified and Etag response
 headers (web browsers, for example).
 
-
-- The server MUST accept all valid HTTP GET requests to the subscriber location.
 - Subscriber requests are considered notifications of intent to receive some message. Subscribers may request existing messages, messages that are not yet available, and messages that are no longer available. The requested message is identified using the If-Modified-Since and If-None-Match request headers.
 - A request with no If-Modified-Since header MUST be assumed to be requesting the oldest available message in a channel.
 - Each 200 OK response containing a message MUST have its Last-Modified and Etag headers set so that a request using those headers will be interpreted as a request for the next available message.
-- Additionally, said 200 OK MUST contain the Content-Type header of the message publisher request, unless no Content-Type header had been provided or it is explicitly overridden by server configuration.
 
 Long-Polling Requests for existing messages will be responded to immediately;
 responses to requests for messages not yet available MUST be delayed until the
@@ -64,8 +54,6 @@ message becomes available. Delayed responses MUST satisfy all of the following
 conditions:
 
  * A 200 OK response containing the message (and its Content-Type) MUST be sent immediately after the message becomes available. The entire response must be indistinguishable from a response to a request for an existing message.
-* If the channel the subscriber is waiting on is deleted or for some reason becomes unavailable, the server MUST immediately send a 410 Gone response.
-* If another subscriber has conflicted with this request, the server MUST immediately send a 409 Conflict response.
 
 Interval-Polling
 * All requests will be responded to immediately. Requests for messages not yet available MUST produce a 304 Not Modified response code.

@@ -1,6 +1,7 @@
 require 'uuid'
 
 require 'deferrable_body'
+require 'red_baton/message'
 require 'red_baton/channel_manager'
 require 'red_baton/publish_endpoint'
 require 'red_baton/subscribe_endpoint'
