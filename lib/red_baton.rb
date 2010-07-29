@@ -1,6 +1,7 @@
 require 'uuid'
 
 require 'deferrable_body'
+require 'red_baton/constants'
 require 'red_baton/message'
 require 'red_baton/channel_manager'
 require 'red_baton/publish_endpoint'
@@ -28,7 +29,7 @@ class RedBaton
 
   def call(env)
     env[SESSION_ID_ENV_KEY] = UUID.generate
-    url = env["PATH_INFO"]
+    url = env[Env::PATH_INFO]
 
     if url =~ %r{/publish/(.*)}
       channel_id = $1

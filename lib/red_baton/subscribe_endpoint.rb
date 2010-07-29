@@ -2,7 +2,11 @@ require 'red_baton/endpoint'
 
 class RedBaton
   class SubscribeEndpoint < Endpoint
-
+    PRIOR_CONNECTION = 'Already a connection on this channel'.freeze
+    NEWER_MESSAGE = 'Newer connection on this channel'.freeze
+    CHANNEL_GONE = 'Gone. Channel no longer exists'.freeze
+    GET_REQUESTS_ONLY = 'Only GET requests are allowed'.freeze
+    
     def handle(channel_id, env)
       unless request_method(env) == HTTP_GET
         return immediate_405_get_requests_only
@@ -25,27 +29,26 @@ class RedBaton
     end
   
     def async_409_prior_connection(env)
-      async_response env, 409, {"Content-Type" => "text/plain"}, "Already a connection on this channel"
+      async_response(env, 409, PRIOR_CONNECTION)
     end
 
     def async_409_newer_connection(env)
-      async_response env, 409, {"Content-Type" => "text/plain"}, "Newer connection on this channel"
+      async_response(env, 409, NEWER_MESSAGE)
     end
     
     def async_410_channel_gone(env)
-      async_response env, 410, {"Content-Type" => "text/plain"}, "Gone. Channel no longer exists"
+      async_response(env, 410, CHANNEL_GONE)
     end
     
     def async_200_with_message(env, message)
-      async_response env, 200,
-                     { "Last-Modified" => message.http_timestamp,
-                       "ETag" => message.etag,
-                       "Content-Type" => message.content_type },
-                     message.body
+      async_response env, 200, message.body,
+                     { Headers::LAST_MODIFIED => message.http_timestamp,
+                       Headers::ETAG => message.etag,
+                       Headers::CONTENT_TYPE => message.content_type }
     end
     
     def immediate_405_get_requests_only
-      [405, {"Content-Type" => "text/plain"}, "Only GET requests are allowed."]
+      [405, Headers::DEFAULT, GET_REQUESTS_ONLY]
     end
     
     def perform_subscriber_disconnect(session_id, channel_id, env)
@@ -67,7 +70,7 @@ class RedBaton
       elsif message = @channel_manager.pop_subscriber_message(my_session_id)
         async_200_with_message(env, message)
 
-      elsif message = @channel_manager.get_channel_message(channel_id, env['HTTP_IF_MODIFIED_SINCE'], env['HTTP_IF_NONE_MATCH'])
+      elsif message = @channel_manager.get_channel_message(channel_id, env[Env::IF_MODIFIED_SINCE], env[Env::IF_NONE_MATCH])
         async_200_with_message(env, message)
 
       else

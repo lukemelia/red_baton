@@ -2,34 +2,40 @@ require 'red_baton/endpoint'
 
 class RedBaton
   class PublishEndpoint < Endpoint
-
+    CHANNEL_CREATED = 'Channel created'.freeze
+    CHANNEL_DELETED = 'Channel deleted'.freeze
+    CHANNEL_EXISTS = 'Channel exists'.freeze
+    CHANNEL_DOES_NOT_EXIST = 'Channel does not exist'.freeze
+    MESSAGE_DELIVERED = 'Message delivered'.freeze
+    MESSAGE_ACCEPTED = 'Message accepted'.freeze
+    
     def handle(channel_id, env)
       case request_method(env)
-      when 'POST'
+      when HTTP_POST
         rack_request = Rack::Request.new(env)
         message = Message.new(rack_request.body.readlines.join("\n"), Time.now, rack_request.content_type)
         immediate_publish_count = @channel_manager.publish(channel_id, message)
         
         if immediate_publish_count > 0
-          async_201(env, channel_id, "Message delivered")
+          async_201(env, channel_id, MESSAGE_DELIVERED)
         else
-          async_202(env, channel_id, "Message accepted")
+          async_202(env, channel_id, MESSAGE_ACCEPTED)
         end
-      when 'GET'
+      when HTTP_GET
         if @channel_manager.exists?(channel_id)
-          async_200(env, channel_id, "Channel exists")
+          async_200(env, channel_id, CHANNEL_EXISTS)
         else
           async_404_channel_does_not_exist(env)
         end
-      when 'PUT'
+      when HTTP_PUT
         if @channel_manager.create(channel_id)
-          async_200(env, channel_id, "Channel created")
+          async_200(env, channel_id, CHANNEL_CREATED)
         else
-          async_200(env, channel_id, "Channel exists")
+          async_200(env, channel_id, CHANNEL_EXISTS)
         end
-      when 'DELETE'
+      when HTTP_DELETE
         if @channel_manager.delete(channel_id)
-          async_200(env, channel_id, "Channel deleted")
+          async_200(env, channel_id, CHANNEL_DELETED)
         else
           async_404_channel_does_not_exist(env)
         end
@@ -44,32 +50,32 @@ class RedBaton
 
     def async_404_channel_does_not_exist(env)
       EM.next_tick do
-        async_response(env, 404, {"Content-Type" => "text/plain"}, "Channel does not exist")
+        async_response(env, 404, CHANNEL_DOES_NOT_EXIST)
       end
     end
 
     def async_200(env, channel_id, message)
       EM.next_tick do
-        async_response(env, 200, channel_info_headers(channel_id), message)
+        async_response(env, 200, message, channel_info_headers(channel_id))
       end
     end
 
     def async_201(env, channel_id, message)
       EM.next_tick do
-        async_response(env, 201, channel_info_headers(channel_id), message)
+        async_response(env, 201, message, channel_info_headers(channel_id))
       end
     end
 
     def async_202(env, channel_id, message)
       EM.next_tick do
-        async_response(env, 202, channel_info_headers(channel_id), message)
+        async_response(env, 202, message, channel_info_headers(channel_id))
       end
     end
 
-    def channel_info_headers(channel_id, extra_headers = { "Content-Type" => "text/plain" } )
+    def channel_info_headers(channel_id, extra_headers = Headers::DEFAULT)
       {
-        "X-Channel-Subscribers" => @channel_manager.subscriber_count(channel_id).to_s,
-        "X-Channel-Messages" => @channel_manager.message_count(channel_id).to_s
+        Headers::CHANNEL_SUBSCRIBERS => @channel_manager.subscriber_count(channel_id).to_s,
+        Headers::CHANNEL_MESSAGES => @channel_manager.message_count(channel_id).to_s
       }.merge(extra_headers)
     end
   end
