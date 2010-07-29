@@ -318,4 +318,18 @@ describe "publisher endpoint" do
       send_options_request('/publish/42').code.to_i.should == 400
     end
   end
+
+  context "with custom publish endpoint" do
+    before(:each) do
+      start_server(RedBaton.new(:store_messages => true, :publish_path => '/custom/pub/:channel_id'))
+    end
+    after(:each) do
+      stop_server
+    end
+
+    it "should work as expected" do
+      put('/custom/pub/42')
+      get('/custom/pub/42').code.to_i.should == 200
+    end
+  end
 end

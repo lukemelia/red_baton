@@ -41,4 +41,14 @@ describe "subscriber endpoint" do
     end
   end
     
+  context "with custom subscribe endpoint" do
+    it "should respond with 200 and the message" do
+      start_server(RedBaton.new(:store_messages => true, :subscribe_path => '/custom/sub/:channel_id'))
+      post('/publish/42', "Hi, Mom!")
+      subscribe_response = get('/custom/sub/42')
+      subscribe_response.code.to_i.should == 200
+      subscribe_response.body.should == "Hi, Mom!"
+      stop_server
+    end
+  end
 end
