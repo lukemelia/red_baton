@@ -76,18 +76,19 @@ class SubscribeResult
 end
 
 def subscribe(endpoint, opts = {})
-  starting_number_of_subscribers = get('/publish/42').response.header['x-channel-subscribers'].to_i
+  publish_endpoint = endpoint.gsub(/subscribe/, 'publish').gsub(/sub/, 'pub')
+  starting_number_of_subscribers = get(publish_endpoint).response.header['x-channel-subscribers'].to_i
   
   request_headers = {}
   request_headers['If-Modified-Since'] = opts[:if_modified_since] if opts[:if_modified_since]
   request_headers['If-None-Match'] = opts[:if_none_match] if opts[:if_none_match]
   subscribe_result = SubscribeResult.new
   subscribe_result.thread = Thread.new do
-    subscribe_result.response = get('/subscribe/42', request_headers)
+    subscribe_result.response = get(endpoint, request_headers)
   end
 
   poll_until {
-    get('/publish/42').response.header['x-channel-subscribers'].to_i == starting_number_of_subscribers + 1
+    get(publish_endpoint).response.header['x-channel-subscribers'].to_i == starting_number_of_subscribers + 1
   }
   subscribe_result
 end

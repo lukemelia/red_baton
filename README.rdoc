@@ -1,23 +1,29 @@
 = Red Baton
 
-Red Baton is an implemention of the Basic HTTP Push Relay Protocol (http://pushmodule.slact.net/protocol.html) in Ruby using EventMachine.
+Red Baton is an implementation of the Basic HTTP Push Relay Protocol (http://pushmodule.slact.net/protocol.html) in Ruby using EventMachine.
 
 == Current status
 
 Experimental - has not been run in production or even tested under load
 
+== Usage
+
+  git clone ...
+  cd red_baton
+  bundle install
+  bin/red_baton
+  
 == TODO
 
-  * Channel group support
   * Configuration
   * Interval-Polling
     * All requests will be responded to immediately. Requests for messages
       not yet available MUST produce a 304 Not Modified response code.
-  * Stress testing
+  * Finish README
 
 == Configuration
 
-=== red_baton_config.rb examples:
+=== red_baton_config.rb examples (not yet implemented):
 
 ==== EXAMPLE 1:
 

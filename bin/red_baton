@@ -5,7 +5,6 @@ require "bundler"
 Bundler.setup
 
 require 'thin'
-require 'em-redis'
 require 'active_support/core_ext/object/blank'
 
 libdir = File.expand_path(File.dirname(__FILE__) + '/../lib')
