@@ -1,0 +1,57 @@
+= Red Baton
+
+Red Baton is an implemention of the Basic HTTP Push Relay Protocol (http://pushmodule.slact.net/protocol.html) in Ruby using EventMachine.
+
+== Current status
+
+Experimental - has not been run in production or even tested under load
+
+== TODO
+
+  * Channel group support
+  * Configuration
+  * Interval-Polling
+    * All requests will be responded to immediately. Requests for messages
+      not yet available MUST produce a 304 Not Modified response code.
+  * Stress testing
+
+== Configuration
+
+=== red_baton_config.rb examples:
+
+==== EXAMPLE 1:
+
+  red_baton do
+    publisher '/publish/:channel_id' do
+      store_messages   true     # enable message queueing 
+      message_timeout  2.hours  # expire buffered messages after 2 hours
+      max_messages     10       # store at most 10 messages
+      min_recipients   0        # minimum recipients before purge
+    end
+  
+    subscriber '/subscriptions/:channel_id' do
+      concurrency   :broadcast    # all multiple clients on the same channel
+                                  # messages are relayed to all clients
+      default_type  'text/plain'  # default type for responses
+    end
+  end
+
+==== EXAMPLE 2:
+
+  red_baton do
+    publisher '/rt/publish/:channel_id' do
+      channel_group     :notifications  # namespace for channel_ids and messages
+      store_messages    true            # enable message queueing 
+      message_timeout   5.minutes       # expire buffered messages after 5 minutes
+      max_messages      5               # store at most 5 messages
+      min_messages      0               # no minimum to stored messages
+      delete_delivered  true            # delete message after delivering it
+    end
+  
+    subscriber '/rt/notifications/:channel_id' do
+      channel_group   :notifications     # namespace for channel_ids and messages
+      concurrency     :last              # only the oldest listener is kept
+      default_type    'text/javascript'  # default type for responses
+      add_header      'Cache-Control' => "max-age=0, must-revalidate"
+    end
+  end
